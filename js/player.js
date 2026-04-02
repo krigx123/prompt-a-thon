@@ -83,8 +83,9 @@ class Player {
 
         // 1. Move Horizontally
         let moving = false;
-        const leftKey = this.id === 2 ? (keys.KeyA) : (keys.ArrowLeft);
-        const rightKey = this.id === 2 ? (keys.KeyD) : (keys.ArrowRight);
+        // Red (id=1): WASD  |  Cyan (id=2): Arrow Keys
+        const leftKey  = this.id === 1 ? keys.KeyA  : keys.ArrowLeft;
+        const rightKey = this.id === 1 ? keys.KeyD  : keys.ArrowRight;
 
         if (leftKey) {
             this.vx -= CONFIG.playerAccel;
@@ -153,10 +154,12 @@ class Player {
         }
 
         // 2. Vertical Movement Logic
+        // Red (id=1): W up, S down, Space jump
+        // Cyan (id=2): ArrowUp up, ArrowDown down, Space jump
         let jumpPressed = false;
         let downKey = false;
-        if (this.id === 2) {
-            jumpPressed = keys.KeyW;
+        if (this.id === 1) {
+            jumpPressed = keys.KeyW || keys.Space;
             downKey = keys.KeyS;
         } else {
             jumpPressed = keys.ArrowUp;
@@ -203,7 +206,8 @@ class Player {
         this.wasSpacePressed = jumpPressed;
         
         // Fire Logic
-        const firePressed = this.id === 2 ? keys.KeyF : (keys.ShiftRight || keys.ShiftLeft || keys.Space);
+        // Red (id=1): F key  |  Cyan (id=2): Shift
+        const firePressed = this.id === 1 ? keys.KeyF : (keys.ShiftRight || keys.ShiftLeft);
         if (firePressed && !this.wasFirePressed && this.powerState === 2) {
              projectiles.push(new Projectile(this.x + this.width, this.y + this.height/3, 10));
              for(let i=0; i<3; i++) particles.push(new Particle(this.x+this.width, this.y+this.height/3, Math.random()*2, (Math.random()-0.5)*2, 3, '#e74c3c'));

@@ -43,7 +43,6 @@ const keys = {
     ArrowLeft: false,
     ArrowRight: false,
     Enter: false,
-    KeyI: false,
     KeyW: false,
     KeyA: false,
     KeyS: false,
