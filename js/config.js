@@ -28,7 +28,8 @@ let state = {
     coins: 0,
     world: "1-1",
     time: 400,
-    lastTimeMillis: 0
+    lastTimeMillis: 0,
+    distance: 0
 };
 
 const keys = {
@@ -36,13 +37,22 @@ const keys = {
     ArrowUp: false,
     ArrowLeft: false,
     ArrowRight: false,
-    Enter: false
+    Enter: false,
+    KeyW: false,
+    KeyA: false,
+    KeyS: false,
+    KeyD: false,
+    KeyF: false
 };
 
 // Global arrays
 let player;
 let clouds = [];
 let particles = [];
+let platforms = [];
+let items = [];
+let enemies = [];
+let projectiles = [];
 
 function resizeCanvas() {
     canvas.width = window.innerWidth;

@@ -8,7 +8,17 @@ function initGame() {
     state.coins = 0;
     state.time = 400;
     state.lastTimeMillis = Date.now();
+    platforms = [];
+    items = [];
+    enemies = [];
+    projectiles = [];
     
+    // Initial ground block to spawn on
+    platforms.push(new Platform(0, canvas.height - CONFIG.groundHeight, canvas.width * 1.5, CONFIG.groundHeight + 200, 'ground'));
+    
+    player.x = 100;
+    player.y = canvas.height - CONFIG.groundHeight - player.height;
+
     for(let i=0; i<3; i++) {
         let cloud = new Cloud();
         cloud.x = Math.random() * canvas.width;
@@ -35,6 +45,8 @@ function animate() {
             drawHUD(ctx, canvas);
             drawMobileControls(ctx, canvas);
             
+            state.distance += state.currentSpeed;
+            
             // Time logic
             if (now - state.lastTimeMillis > 1000) {
                 state.time--;
@@ -45,9 +57,9 @@ function animate() {
             }
             state.frames++;
 
-            // Triggers game over if player falls off the screen
-            if (player.y > canvas.height) {
-                state.current = GAME_STATE.GAME_OVER;
+            // Triggers death if player falls off the screen
+            if (player.y > canvas.height + 50 && !player.dead) {
+                player.die();
             }
             break;
             
