@@ -26,7 +26,17 @@ function initGame() {
     }
 }
 
-function animate() {
+let lastFrameTime = 0;
+const fpsInterval = 1000 / 60;
+
+function animate(time) {
+    requestAnimationFrame(animate);
+    
+    if (!time) time = performance.now();
+    let elapsed = time - lastFrameTime;
+    if (elapsed < fpsInterval) return;
+    lastFrameTime = time - (elapsed % fpsInterval);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const now = Date.now();
@@ -67,8 +77,6 @@ function animate() {
             drawGameOver(ctx, canvas);
             break;
     }
-
-    requestAnimationFrame(animate);
 }
 
 // ==========================================

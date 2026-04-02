@@ -51,17 +51,22 @@ function handleEntities() {
                     platforms.push(new Platform(obX, groundY - 140, 40, 40, 'mystery'));
                     platforms.push(new Platform(obX - 40, groundY - 140, 40, 40, 'brick'));
                     platforms.push(new Platform(obX + 40, groundY - 140, 40, 40, 'brick'));
-                    if (Math.random() < 0.5) enemies.push(new Enemy(obX, groundY - 40, 'bug'));
+                    if (Math.random() < 0.5) enemies.push(new Enemy(obX, groundY - 40, state.moonMode ? 'mine' : 'bug'));
                 } else {
                     // Floating ledge / Double jump requirement
                     platforms.push(new Platform(obX, groundY - 160, 180, 32, 'brick'));
                     if (Math.random() < 0.5) {
                          platforms.push(new Platform(obX + 60, groundY - 280, 40, 40, 'mystery'));
                     }
-                    if (Math.random() < 0.6) enemies.push(new Enemy(obX + 40, groundY - 200, 'fast'));
+                    if (Math.random() < 0.6) {
+                        let enemyY = state.moonMode ? groundY - 250 : groundY - 200;
+                        enemies.push(new Enemy(obX + 40, enemyY, state.moonMode ? 'ufo' : 'fast'));
+                    }
                 }
             } else if (maxPlatX > 0 && Math.random() < 0.3 && groundW > 250) {
-                enemies.push(new Enemy(newX + 100 + Math.random()*(groundW - 150), groundY - 40, Math.random() < 0.7 ? 'bug' : 'fast'));
+                let enemyType = state.moonMode ? (Math.random() < 0.6 ? 'ufo' : 'mine') : (Math.random() < 0.7 ? 'bug' : 'fast');
+                let enemyY = state.moonMode ? groundY - (Math.random() * 200 + 40) : groundY - 40;
+                enemies.push(new Enemy(newX + 100 + Math.random()*(groundW - 150), enemyY, enemyType));
             }
             maxPlatX = newX + groundW;
         }
@@ -84,36 +89,69 @@ function handleEntities() {
 }
 
 function drawEnvironment(ctx, canvas) {
-    let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#5A94FF'); 
-    grad.addColorStop(1, '#dfe6e9');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (state.moonMode) {
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#000000'); 
+        grad.addColorStop(1, '#1A1A2E');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Sun
-    ctx.fillStyle = 'rgba(255, 234, 167, 0.9)';
-    ctx.beginPath();
-    ctx.arc(canvas.width * 0.8, canvas.height * 0.3, 40, 0, Math.PI * 2);
-    ctx.fill();
+        // Procedural Stars
+        ctx.fillStyle = '#ffffff';
+        for(let i=0; i<50; i++) {
+            let sx = ((i * 13579) - state.distance*0.05) % canvas.width;
+            if (sx < 0) sx += canvas.width;
+            let sy = (i * 8642) % (canvas.height * 0.7);
+            ctx.fillRect(sx, sy, (i%2)+1, (i%2)+1);
+        }
 
-    clouds.forEach(c => c.draw(ctx));
-
-    // Parallax Backgrounds (City / Circuits)
-    ctx.save();
-    let scroll1 = (state.distance * 0.2) % canvas.width;
-    let groundY = canvas.height - CONFIG.groundHeight;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    for(let i=-1; i<2; i++) {
-        let bx = i * canvas.width - scroll1;
-        // Background buildings / circuits
-        ctx.fillRect(bx + 100, groundY - 200, 80, 200);
-        ctx.fillRect(bx + 200, groundY - 150, 100, 150);
-        ctx.fillRect(bx + 350, groundY - 300, 60, 300);
-        ctx.fillRect(bx + 450, groundY - 180, 120, 180);
-        ctx.fillRect(bx + 600, groundY - 240, 90, 240);
-        ctx.fillRect(bx + 800, groundY - 120, 150, 120);
+        // Earth
+        ctx.save();
+        let scrollEarth = (state.distance * 0.02) % canvas.width;
+        ctx.translate(canvas.width*0.7 - scrollEarth, canvas.height*0.3);
+        ctx.fillStyle = '#2980b9'; // Ocean
+        ctx.beginPath();
+        ctx.arc(0, 0, 100, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#27ae60'; // Land
+        ctx.beginPath();
+        ctx.arc(-20, -30, 30, 0, Math.PI * 2);
+        ctx.arc(20, 10, 40, 0, Math.PI * 2);
+        ctx.arc(-40, 40, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    } else {
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#5A94FF'); 
+        grad.addColorStop(1, '#dfe6e9');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+        // Sun
+        ctx.fillStyle = 'rgba(255, 234, 167, 0.9)';
+        ctx.beginPath();
+        ctx.arc(canvas.width * 0.8, canvas.height * 0.3, 40, 0, Math.PI * 2);
+        ctx.fill();
+    
+        clouds.forEach(c => c.draw(ctx));
+    
+        // Parallax Backgrounds (City / Circuits)
+        ctx.save();
+        let scroll1 = (state.distance * 0.2) % canvas.width;
+        let groundY = canvas.height - CONFIG.groundHeight;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        for(let i=-1; i<2; i++) {
+            let bx = i * canvas.width - scroll1;
+            // Background buildings / circuits
+            ctx.fillRect(bx + 100, groundY - 200, 80, 200);
+            ctx.fillRect(bx + 200, groundY - 150, 100, 150);
+            ctx.fillRect(bx + 350, groundY - 300, 60, 300);
+            ctx.fillRect(bx + 450, groundY - 180, 120, 180);
+            ctx.fillRect(bx + 600, groundY - 240, 90, 240);
+            ctx.fillRect(bx + 800, groundY - 120, 150, 120);
+        }
+        ctx.restore();
     }
-    ctx.restore();
 
     // Ensure ground and other platforms are drawn
     if (typeof platforms !== 'undefined') {

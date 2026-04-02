@@ -29,7 +29,9 @@ let state = {
     world: "1-1",
     time: 400,
     lastTimeMillis: 0,
-    distance: 0
+    distance: 0,
+    moonMode: false,
+    wasGPressed: false
 };
 
 const keys = {
@@ -42,7 +44,8 @@ const keys = {
     KeyA: false,
     KeyS: false,
     KeyD: false,
-    KeyF: false
+    KeyF: false,
+    KeyG: false
 };
 
 // Global arrays

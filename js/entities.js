@@ -135,14 +135,18 @@ class Platform {
                     
                     if (r % 2 !== 0) cx -= brickW / 2;
                     
-                    ctx.fillStyle = '#C84C0C';
+                    let c1 = state.moonMode ? '#95a5a6' : '#C84C0C';
+                    let c2 = state.moonMode ? '#bdc3c7' : '#ffcca6';
+                    let c3 = state.moonMode ? '#7f8c8d' : '#8B2C04';
+                    
+                    ctx.fillStyle = c1;
                     ctx.fillRect(cx + 2, cy + 2, brickW - 4, brickH - 4);
                     
-                    ctx.fillStyle = '#ffcca6';
+                    ctx.fillStyle = c2;
                     ctx.fillRect(cx + 2, cy + 2, brickW - 4, 3);
                     ctx.fillRect(cx + 2, cy + 2, 3, brickH - 4);
                     
-                    ctx.fillStyle = '#8B2C04';
+                    ctx.fillStyle = c3;
                     ctx.fillRect(cx + 2, cy + brickH - 5, brickW - 4, 3);
                     ctx.fillRect(cx + brickW - 5, cy + 2, 3, brickH - 4);
                 }
@@ -150,12 +154,12 @@ class Platform {
             ctx.restore();
             
         } else if (this.type === 'brick') {
-            ctx.fillStyle = '#CC4A14';
+            ctx.fillStyle = state.moonMode ? '#7f8c8d' : '#CC4A14';
             ctx.fillRect(this.x, drawY, this.width, this.height);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.strokeRect(this.x, drawY, this.width, this.height);
-            ctx.fillStyle = '#FFB89A';
+            ctx.fillStyle = state.moonMode ? '#bdc3c7' : '#FFB89A';
             ctx.fillRect(this.x + 2, drawY + 2, this.width - 4, 3);
             ctx.fillRect(this.x + 2, drawY + 2, 3, this.height - 4);
         } else if (this.type === 'mystery') {
@@ -231,7 +235,7 @@ class Collectible {
             this.vx *= 0.9;
             this.vy *= 0.9;
         } else {
-            this.vy += CONFIG.gravity * 0.8;
+            this.vy += (state.moonMode ? CONFIG.gravity * 0.1 : CONFIG.gravity * 0.8);
         }
         
         this.x += this.vx;
@@ -304,10 +308,21 @@ class Enemy {
     constructor(x, y, type) {
         this.x = x;
         this.y = y;
-        this.type = type; // 'bug', 'fast', 'turtle'
+        this.type = type; // 'bug', 'fast', 'turtle', 'ufo', 'mine'
         this.width = 32;
         this.height = 32;
         this.vx = type === 'fast' ? -2.5 : -1;
+        this.baseY = y;
+        this.gravityImmune = false;
+        
+        if (type === 'ufo') {
+            this.vx = -1.5;
+            this.gravityImmune = true;
+        } else if (type === 'mine') {
+            this.vx = -0.5;
+            this.gravityImmune = true;
+        }
+        
         this.state = 'walking'; // For turtle
         this.vy = 0;
         this.markedForDeletion = false;
@@ -327,9 +342,17 @@ class Enemy {
         }
 
         this.x -= state.currentSpeed - this.vx;
-        this.vy += CONFIG.gravity;
-        if (this.vy > 12) this.vy = 12;
-        this.y += this.vy;
+        
+        if (this.gravityImmune) {
+            if (this.type === 'ufo') {
+                this.y = this.baseY + Math.sin(state.frames * 0.05) * 40;
+            }
+            // space mine moves straight linearly 
+        } else {
+            this.vy += (state.moonMode ? 0.05 : CONFIG.gravity);
+            if (this.vy > 12) this.vy = 12;
+            this.y += this.vy;
+        }
 
         let grounded = false;
         for(let plat of platforms) {
@@ -402,6 +425,45 @@ class Enemy {
                 ctx.fillRect(0, 0, this.width, this.height);
                 ctx.fillStyle = '#145A32';
                 ctx.fillRect(4, 4, 24, 14);
+            }
+        } else if (this.type === 'ufo') {
+            // UFO saucer
+            ctx.fillStyle = '#95a5a6'; // grey
+            ctx.beginPath();
+            ctx.ellipse(this.width/2, this.height/2, 22, 8, 0, 0, Math.PI*2);
+            ctx.fill();
+            // Cyan dome
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath();
+            ctx.arc(this.width/2, this.height/2 - 2, 10, Math.PI, 0);
+            ctx.fill();
+            // Green beam
+            if (!this.dead && Math.floor(state.frames/4)%2===0) {
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
+                ctx.beginPath();
+                ctx.moveTo(this.width/2 - 5, this.height/2 + 5);
+                ctx.lineTo(this.width/2 + 5, this.height/2 + 5);
+                ctx.lineTo(this.width/2 + 15, this.height/2 + 40);
+                ctx.lineTo(this.width/2 - 15, this.height/2 + 40);
+                ctx.fill();
+            }
+        } else if (this.type === 'mine') {
+            ctx.fillStyle = '#34495e'; // dark grey
+            ctx.beginPath();
+            ctx.arc(this.width/2, this.height/2, 12, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Spikes
+            ctx.fillStyle = '#95a5a6';
+            ctx.fillRect(this.width/2 - 2, this.height/2 - 16, 4, 32);
+            ctx.fillRect(this.width/2 - 16, this.height/2 - 2, 32, 4);
+            
+            // Blinking red light
+            if (!this.dead && Math.floor(state.frames/10)%2===0) {
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.arc(this.width/2, this.height/2, 4, 0, Math.PI*2);
+                ctx.fill();
             }
         }
         ctx.restore();

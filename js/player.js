@@ -66,6 +66,19 @@ class Player {
         }
 
         if (this.invulnerableTimer > 0) this.invulnerableTimer--;
+        
+        // Moon Mode Toggle
+        const gPressed = keys.KeyG;
+        if (gPressed && !state.wasGPressed) {
+            state.moonMode = !state.moonMode;
+            if (typeof enemies !== 'undefined') {
+                for (let e of enemies) {
+                    e.markedForDeletion = true;
+                    for (let i=0; i<3; i++) particles.push(new Particle(e.x+15, e.y+15, (Math.random()-0.5)*4, (Math.random()-0.5)*4, 3, '#ecf0f1'));
+                }
+            }
+        }
+        state.wasGPressed = gPressed;
 
         // 1. Move Horizontally
         let moving = false;
@@ -79,7 +92,11 @@ class Player {
         }
 
         if (!moving) {
-            this.vx *= this.isGrounded ? CONFIG.playerFriction : CONFIG.playerAirFriction;
+            if (state.moonMode) {
+                this.vx *= 0.98; // Low friction drift
+            } else {
+                this.vx *= this.isGrounded ? CONFIG.playerFriction : CONFIG.playerAirFriction;
+            }
         }
         
         // Limit horizontal speed
@@ -134,27 +151,45 @@ class Player {
             state.currentSpeed = CONFIG.baseSpeed;
         }
 
-        // 2. Variable Jump Logic
+        // 2. Vertical Movement Logic
         const jumpPressed = keys.Space || keys.ArrowUp || keys.KeyW;
         
-        if (jumpPressed && !this.wasSpacePressed) {
-            if (this.isGrounded) {
-                this.vy = CONFIG.jumpForce;
-                this.isGrounded = false;
-                this.jumpTimer = CONFIG.jumpHoldFrames;
-                this.doubleJumpAvailable = true;
-                this.spawnParticles(this.x + this.width/2, this.y + this.height, 6);
-            } else if (this.doubleJumpAvailable) {
-                this.vy = CONFIG.jumpForce;
-                this.doubleJumpAvailable = false;
-                this.jumpTimer = Math.floor(CONFIG.jumpHoldFrames * 0.7);
-                this.spawnParticles(this.x + this.width/2, this.y + this.height, 8, '#fdf104'); 
+        if (state.moonMode) {
+            if (jumpPressed) {
+                this.vy -= CONFIG.playerAccel * 0.6; // upward thrust
+                if (state.frames % 3 === 0) {
+                    particles.push(new Particle(this.x + this.width/2 + (Math.random()*10-5), this.y + this.height, (Math.random()-0.5)*2, Math.random()*2+2, 4, '#00ffff'));
+                }
             }
-        } else if (jumpPressed && this.jumpTimer > 0) {
-            this.vy -= (CONFIG.gravity * 0.6); // Less effective counter-gravity
-            this.jumpTimer--;
+            if (keys.ArrowDown || keys.KeyS) {
+                this.vy += CONFIG.playerAccel * 0.6; // downward thrust
+                if (state.frames % 3 === 0) {
+                    particles.push(new Particle(this.x + this.width/2 + (Math.random()*10-5), this.y, (Math.random()-0.5)*2, -Math.random()*2-2, 4, '#00ffff'));
+                }
+            }
+            if (!jumpPressed && !keys.ArrowDown && !keys.KeyS) {
+                this.vy *= 0.98; // drift
+            }
         } else {
-            this.jumpTimer = 0;
+            if (jumpPressed && !this.wasSpacePressed) {
+                if (this.isGrounded) {
+                    this.vy = CONFIG.jumpForce;
+                    this.isGrounded = false;
+                    this.jumpTimer = CONFIG.jumpHoldFrames;
+                    this.doubleJumpAvailable = true;
+                    this.spawnParticles(this.x + this.width/2, this.y + this.height, 6);
+                } else if (this.doubleJumpAvailable) {
+                    this.vy = CONFIG.jumpForce;
+                    this.doubleJumpAvailable = false;
+                    this.jumpTimer = Math.floor(CONFIG.jumpHoldFrames * 0.7);
+                    this.spawnParticles(this.x + this.width/2, this.y + this.height, 8, '#fdf104'); 
+                }
+            } else if (jumpPressed && this.jumpTimer > 0) {
+                this.vy -= (CONFIG.gravity * 0.6); // Less effective counter-gravity
+                this.jumpTimer--;
+            } else {
+                this.jumpTimer = 0;
+            }
         }
         this.wasSpacePressed = jumpPressed;
         
@@ -167,10 +202,13 @@ class Player {
         this.wasFirePressed = firePressed;
 
         // 3. Move Vertically
-        this.vy += CONFIG.gravity;
-        
-        // Limit fall speed
-        if (this.vy > 12) this.vy = 12;
+        if (!state.moonMode) {
+            this.vy += CONFIG.gravity;
+            if (this.vy > 12) this.vy = 12;
+        } else {
+            if (this.vy > 6) this.vy = 6;
+            if (this.vy < -6) this.vy = -6;
+        }
         
         this.y += this.vy;
 
@@ -308,54 +346,80 @@ class Player {
         const P = '#ffcca6'; 
         const BR = '#5c3a21'; 
         const Y = '#fdf104'; 
-
-        // Hat
-        ctx.fillStyle = R;
-        ctx.fillRect(3*u, 0*v, 5*u, 2*v);
-        ctx.fillRect(2*u, 2*v, 9*u, 1*v); 
         
-        // Head
-        ctx.fillStyle = BR;
-        ctx.fillRect(2*u, 3*v, 3*u, 3*v); 
-        ctx.fillRect(1*u, 4*v, 1*u, 3*v); 
-        
-        ctx.fillStyle = P;
-        ctx.fillRect(5*u, 3*v, 4*u, 4*v); 
-        ctx.fillRect(9*u, 4*v, 2*u, 2*v); 
-        ctx.fillRect(3*u, 6*v, 6*u, 1*v); 
-        
-        ctx.fillStyle = BR;
-        ctx.fillRect(7*u, 3*v, 1*u, 2*v); 
-        ctx.fillRect(7*u, 5*v, 4*u, 1*v); 
-        
-        // Body
-        ctx.fillStyle = R;
-        ctx.fillRect(2*u, 7*v, 3*u, 4*v); 
-        ctx.fillRect(7*u, 7*v, 3*u, 4*v); 
-        ctx.fillRect(4*u, 7*v, 4*u, 2*v); 
-
-        ctx.fillStyle = BL;
-        ctx.fillRect(4*u, 9*v, 4*u, 4*v); 
-        ctx.fillRect(3*u, 8*v, 1*u, 3*v); 
-        ctx.fillRect(8*u, 8*v, 1*u, 3*v); 
-
-        ctx.fillStyle = Y;
-        ctx.fillRect(3*u, 10*v, 1*u, 1*v); 
-        ctx.fillRect(8*u, 10*v, 1*u, 1*v); 
-
-        // Hands
-        ctx.fillStyle = P;
-        ctx.fillRect(1*u, 9*v, 2*u, 2*v); 
-        ctx.fillRect(9*u, 9*v, 2*u, 2*v); 
-
-        // Legs
-        ctx.fillStyle = BR;
-        let stride = 0;
-        if (this.isGrounded && Math.abs(this.vx) > 0.5) stride = Math.sin(state.frames * 0.4) * 3;
-        else if (!this.isGrounded) stride = 2; // Jump pose
-        
-        ctx.fillRect((3 - stride)*u, 13*v, 3*u, 2*v); 
-        ctx.fillRect((6 + stride)*u, 13*v, 3*u, 2*v); 
+        if (state.moonMode) {
+            // Astronaut Suit
+            ctx.fillStyle = '#ecf0f1'; // White suit
+            ctx.fillRect(2*u, 2*v, 8*u, 6*v); // Head
+            ctx.fillRect(3*u, 8*v, 6*u, 5*v); // Body
+            ctx.fillRect(2*u, 13*v, 3*u, 3*v); // Left Leg
+            ctx.fillRect(7*u, 13*v, 3*u, 3*v); // Right Leg
+            ctx.fillRect(1*u, 8*v, 2*u, 4*v); // Left Arm
+            ctx.fillRect(9*u, 8*v, 2*u, 4*v); // Right Arm
+            
+            // Cyan Visor
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(4*u, 4*v, 5*u, 3*v);
+            
+            // Backpack
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(0*u, 7*v, 3*u, 4*v);
+            
+            if (this.powerState > 0) {
+                // Decorate for big/fire
+                ctx.fillStyle = this.powerState === 2 ? '#e74c3c' : '#27ae60';
+                ctx.fillRect(4*u, 9*v, 4*u, 4*v);
+            }
+        } else {
+            // Normal Mario
+            // Hat
+            ctx.fillStyle = R;
+            ctx.fillRect(3*u, 0*v, 5*u, 2*v);
+            ctx.fillRect(2*u, 2*v, 9*u, 1*v); 
+            
+            // Head
+            ctx.fillStyle = BR;
+            ctx.fillRect(2*u, 3*v, 3*u, 3*v); 
+            ctx.fillRect(1*u, 4*v, 1*u, 3*v); 
+            
+            ctx.fillStyle = P;
+            ctx.fillRect(5*u, 3*v, 4*u, 4*v); 
+            ctx.fillRect(9*u, 4*v, 2*u, 2*v); 
+            ctx.fillRect(3*u, 6*v, 6*u, 1*v); 
+            
+            ctx.fillStyle = BR;
+            ctx.fillRect(7*u, 3*v, 1*u, 2*v); 
+            ctx.fillRect(7*u, 5*v, 4*u, 1*v); 
+            
+            // Body
+            ctx.fillStyle = R;
+            ctx.fillRect(2*u, 7*v, 3*u, 4*v); 
+            ctx.fillRect(7*u, 7*v, 3*u, 4*v); 
+            ctx.fillRect(4*u, 7*v, 4*u, 2*v); 
+    
+            ctx.fillStyle = BL;
+            ctx.fillRect(4*u, 9*v, 4*u, 4*v); 
+            ctx.fillRect(3*u, 8*v, 1*u, 3*v); 
+            ctx.fillRect(8*u, 8*v, 1*u, 3*v); 
+    
+            ctx.fillStyle = Y;
+            ctx.fillRect(3*u, 10*v, 1*u, 1*v); 
+            ctx.fillRect(8*u, 10*v, 1*u, 1*v); 
+    
+            // Hands
+            ctx.fillStyle = P;
+            ctx.fillRect(1*u, 9*v, 2*u, 2*v); 
+            ctx.fillRect(9*u, 9*v, 2*u, 2*v); 
+    
+            // Legs
+            ctx.fillStyle = BR;
+            let stride = 0;
+            if (this.isGrounded && Math.abs(this.vx) > 0.5) stride = Math.sin(state.frames * 0.4) * 3;
+            else if (!this.isGrounded) stride = 2; // Jump pose
+            
+            ctx.fillRect((3 - stride)*u, 13*v, 3*u, 2*v); 
+            ctx.fillRect((6 + stride)*u, 13*v, 3*u, 2*v); 
+        }
         
         ctx.restore();
     }
