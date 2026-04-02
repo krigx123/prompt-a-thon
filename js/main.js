@@ -1,5 +1,6 @@
 function initGame() {
-    player = new Player();
+    player1 = new Player(1);
+    player2 = new Player(2);
     clouds = [];
     particles = [];
     state.frames = 0;
@@ -16,8 +17,14 @@ function initGame() {
     // Initial ground block to spawn on
     platforms.push(new Platform(0, canvas.height - CONFIG.groundHeight, canvas.width * 1.5, CONFIG.groundHeight + 200, 'ground'));
     
-    player.x = 100;
-    player.y = canvas.height - CONFIG.groundHeight - player.height;
+    player1.x = 80;
+    player1.y = canvas.height - CONFIG.groundHeight - player1.height;
+    
+    player2.x = 140;
+    player2.y = canvas.height - CONFIG.groundHeight - player2.height;
+    player2.dead = true; // Coop off by default
+    state.coopMode = false;
+    state.wasCPressed = false;
 
     for(let i=0; i<3; i++) {
         let cloud = new Cloud();
@@ -50,8 +57,39 @@ function animate(time) {
             drawEnvironment(ctx, canvas);
             handleEntities();
             particles.forEach(p => p.draw(ctx));
-            player.update();
-            player.draw(ctx);
+            if (keys.KeyC && !state.wasCPressed) {
+                state.coopMode = !state.coopMode;
+                if (state.coopMode) {
+                    player2.dead = false;
+                    player2.x = player1.x + 30;
+                    player2.y = player1.y - 20;
+                    player2.vy = -10; // Pop out
+                    player2.invulnerableTimer = 60;
+                    for(let i=0; i<15; i++) particles.push(new Particle(player2.x, player2.y, (Math.random()-0.5)*10, (Math.random()-0.5)*10, 4, '#ff9f43'));
+                } else {
+                    player2.dead = true;
+                    // spawn particles on removal
+                    for(let i=0; i<15; i++) particles.push(new Particle(player2.x, player2.y, (Math.random()-0.5)*10, (Math.random()-0.5)*10, 4, '#e74c3c'));
+                }
+            }
+            state.wasCPressed = keys.KeyC;
+
+            player1.update();
+            if (state.coopMode) player2.update();
+            
+            let p2Blocked = state.coopMode && player2.blocked;
+            let p2Dead = state.coopMode && player2.dead;
+            
+            // Reconcile speed if either is blocked/dead
+            if (player1.dead || p2Dead || player1.blocked || p2Blocked) {
+                state.currentSpeed = 0;
+            } else {
+                state.currentSpeed = CONFIG.baseSpeed;
+            }
+            
+            player1.draw(ctx);
+            if (state.coopMode) player2.draw(ctx);
+            
             drawHUD(ctx, canvas);
             drawMobileControls(ctx, canvas);
             
@@ -68,8 +106,11 @@ function animate(time) {
             state.frames++;
 
             // Triggers death if player falls off the screen
-            if (player.y > canvas.height + 50 && !player.dead) {
-                player.die();
+            if (player1.y > canvas.height + 50 && !player1.dead) {
+                player1.die();
+            }
+            if (state.coopMode && player2.y > canvas.height + 50 && !player2.dead) {
+                player2.die();
             }
             break;
             

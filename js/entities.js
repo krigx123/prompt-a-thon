@@ -222,18 +222,36 @@ class Collectible {
         
         let isMagnetic = this.type !== 'chip';
         
-        if (isMagnetic && typeof player !== 'undefined' && player && !player.dead) {
-            let dx = (player.x + player.width/2) - (this.x + this.width/2);
-            let dy = (player.y + player.height/2) - (this.y + this.height/2);
-            let dist = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+        if (isMagnetic) {
+            let target = null;
+            let minDist = Infinity;
+            if (typeof player1 !== 'undefined' && player1 && !player1.dead) {
+                let dx = (player1.x + player1.width/2) - (this.x + this.width/2);
+                let dy = (player1.y + player1.height/2) - (this.y + this.height/2);
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < minDist) { minDist = dist; target = player1; }
+            }
+            if (typeof player2 !== 'undefined' && state.coopMode && player2 && !player2.dead) {
+                let dx = (player2.x + player2.width/2) - (this.x + this.width/2);
+                let dy = (player2.y + player2.height/2) - (this.y + this.height/2);
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < minDist) { minDist = dist; target = player2; }
+            }
             
-            let pullStrength = 2.0; 
-            this.vx += (dx / dist) * pullStrength;
-            this.vy += (dy / dist) * pullStrength;
-            
-            // Dampen speed to prevent wild orbiting 
-            this.vx *= 0.9;
-            this.vy *= 0.9;
+            if (target) {
+                let dx = (target.x + target.width/2) - (this.x + this.width/2);
+                let dy = (target.y + target.height/2) - (this.y + this.height/2);
+                let dist = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+                let pullStrength = 2.0; 
+                this.vx += (dx / dist) * pullStrength;
+                this.vy += (dy / dist) * pullStrength;
+                
+                // Dampen speed to prevent wild orbiting 
+                this.vx *= 0.9;
+                this.vy *= 0.9;
+            } else {
+                this.vy += (state.moonMode ? CONFIG.gravity * 0.1 : CONFIG.gravity * 0.8);
+            }
         } else {
             this.vy += (state.moonMode ? CONFIG.gravity * 0.1 : CONFIG.gravity * 0.8);
         }

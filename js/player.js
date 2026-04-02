@@ -1,9 +1,9 @@
 class Player {
-    constructor() {
+    constructor(id = 1) {
+        this.id = id;
         this.width = 30;
         this.height = 40;
-        this.x = Math.min(100, canvas.width * 0.1);
-        this.y = 0; // Will be set by resolving early collision or spawn location
+        this.x = 0; // Set externally
         this.vx = 0;
         this.vy = 0; 
         this.isGrounded = false;
@@ -15,6 +15,7 @@ class Player {
         this.wasSpacePressed = false;
         this.wasFirePressed = false;
         this.powerState = 0; // 0=small, 1=big, 2=fire
+        this.blocked = false;
     }
     
     setPower(newState) {
@@ -51,7 +52,7 @@ class Player {
         this.vy = -12;
         this.vx = 0;
         this.invulnerableTimer = 0;
-        state.currentSpeed = 0; // Stop world scrolling
+        // Game over is triggered globally when this falls off
     }
 
     update() {
@@ -82,11 +83,14 @@ class Player {
 
         // 1. Move Horizontally
         let moving = false;
-        if (keys.ArrowLeft || keys.KeyA) {
+        const leftKey = this.id === 2 ? (keys.KeyA) : (keys.ArrowLeft);
+        const rightKey = this.id === 2 ? (keys.KeyD) : (keys.ArrowRight);
+
+        if (leftKey) {
             this.vx -= CONFIG.playerAccel;
             moving = true;
         }
-        if (keys.ArrowRight || keys.KeyD) {
+        if (rightKey) {
             this.vx += CONFIG.playerAccel;
             moving = true;
         }
@@ -132,42 +136,47 @@ class Player {
         }
 
         // Camera Block / Wait for Jump logic
-        let playerBlocked = false;
+        this.blocked = false;
         for (let plat of platforms) {
             // Check if there is a wall approaching our right side
-            if (plat.x <= this.x + this.width + state.currentSpeed && 
+            if (plat.x <= this.x + this.width + CONFIG.baseSpeed && 
                 plat.x + plat.width > this.x + this.width &&
                 plat.y < this.y + this.height - 2 && 
                 plat.y + plat.height > this.y + 2) {
-                playerBlocked = true;
+                this.blocked = true;
                 break;
             }
         }
         
-        if (playerBlocked && this.x <= 0 && !this.dead) {
-            state.currentSpeed = 0;
-            // Removed this.x = 0 to prevent artificial overlap
-        } else if (!this.dead) {
-            state.currentSpeed = CONFIG.baseSpeed;
+        if (!this.blocked || this.x > 0) {
+            // Unblock x constraint globally
         }
 
         // 2. Vertical Movement Logic
-        const jumpPressed = keys.Space || keys.ArrowUp || keys.KeyW;
+        let jumpPressed = false;
+        let downKey = false;
+        if (this.id === 2) {
+            jumpPressed = keys.KeyW;
+            downKey = keys.KeyS;
+        } else {
+            jumpPressed = keys.ArrowUp;
+            downKey = keys.ArrowDown;
+        }
         
         if (state.moonMode) {
             if (jumpPressed) {
                 this.vy -= CONFIG.playerAccel * 0.6; // upward thrust
                 if (state.frames % 3 === 0) {
-                    particles.push(new Particle(this.x + this.width/2 + (Math.random()*10-5), this.y + this.height, (Math.random()-0.5)*2, Math.random()*2+2, 4, '#00ffff'));
+                    particles.push(new Particle(this.x + this.width/2 + (Math.random()*10-5), this.y + this.height, (Math.random()-0.5)*2, Math.random()*2+2, 4, this.id===2?'#00ffff':'#ff9f43'));
                 }
             }
-            if (keys.ArrowDown || keys.KeyS) {
+            if (downKey) {
                 this.vy += CONFIG.playerAccel * 0.6; // downward thrust
                 if (state.frames % 3 === 0) {
-                    particles.push(new Particle(this.x + this.width/2 + (Math.random()*10-5), this.y, (Math.random()-0.5)*2, -Math.random()*2-2, 4, '#00ffff'));
+                    particles.push(new Particle(this.x + this.width/2 + (Math.random()*10-5), this.y, (Math.random()-0.5)*2, -Math.random()*2-2, 4, this.id===2?'#00ffff':'#ff9f43'));
                 }
             }
-            if (!jumpPressed && !keys.ArrowDown && !keys.KeyS) {
+            if (!jumpPressed && !downKey) {
                 this.vy *= 0.98; // drift
             }
         } else {
@@ -194,12 +203,17 @@ class Player {
         this.wasSpacePressed = jumpPressed;
         
         // Fire Logic
-        const firePressed = keys.KeyF;
+        const firePressed = this.id === 2 ? keys.KeyF : (keys.ShiftRight || keys.ShiftLeft || keys.Space);
         if (firePressed && !this.wasFirePressed && this.powerState === 2) {
              projectiles.push(new Projectile(this.x + this.width, this.y + this.height/3, 10));
              for(let i=0; i<3; i++) particles.push(new Particle(this.x+this.width, this.y+this.height/3, Math.random()*2, (Math.random()-0.5)*2, 3, '#e74c3c'));
         }
         this.wasFirePressed = firePressed;
+
+        // Particle trail
+        if (this.id === 1 && !state.moonMode && !this.dead && state.frames % 4 === 0) {
+             particles.push(new Particle(this.x + this.width/2, this.y + this.height - 5, (Math.random()-0.5), (Math.random()-0.5), 3, '#e67e22'));
+        }
 
         // 3. Move Vertically
         if (!state.moonMode) {
@@ -341,15 +355,22 @@ class Player {
         const u = this.width / 12; 
         const v = this.height / 16;
         
-        const R = this.powerState === 2 ? '#ecf0f1' : '#e52521'; 
-        const BL = this.powerState === 2 ? '#e74c3c' : '#0043bb'; 
+        const R = this.powerState === 2 ? '#ecf0f1' : (this.id === 2 ? '#0984e3' : '#e84118'); 
+        const BL = this.powerState === 2 ? '#e74c3c' : (this.id === 2 ? '#74b9ff' : '#0043bb'); 
         const P = '#ffcca6'; 
         const BR = '#5c3a21'; 
         const Y = '#fdf104'; 
+
+        if (this.id === 2) {
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 8;
+        } else {
+            ctx.shadowBlur = 0;
+        }
         
         if (state.moonMode) {
             // Astronaut Suit
-            ctx.fillStyle = '#ecf0f1'; // White suit
+            ctx.fillStyle = this.id === 2 ? '#ecf0f1' : '#bdc3c7'; // White/Grey suit
             ctx.fillRect(2*u, 2*v, 8*u, 6*v); // Head
             ctx.fillRect(3*u, 8*v, 6*u, 5*v); // Body
             ctx.fillRect(2*u, 13*v, 3*u, 3*v); // Left Leg
@@ -357,8 +378,8 @@ class Player {
             ctx.fillRect(1*u, 8*v, 2*u, 4*v); // Left Arm
             ctx.fillRect(9*u, 8*v, 2*u, 4*v); // Right Arm
             
-            // Cyan Visor
-            ctx.fillStyle = '#00ffff';
+            // Cyan/Orange Visor
+            ctx.fillStyle = this.id === 2 ? '#00ffff' : '#ff9f43';
             ctx.fillRect(4*u, 4*v, 5*u, 3*v);
             
             // Backpack
@@ -421,6 +442,7 @@ class Player {
             ctx.fillRect((6 + stride)*u, 13*v, 3*u, 2*v); 
         }
         
+        ctx.shadowBlur = 0;
         ctx.restore();
     }
 }

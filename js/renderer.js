@@ -24,7 +24,8 @@ function handleEntities() {
         });
         
         while (maxPlatX < canvas.width + 1200 && state.current === GAME_STATE.PLAYING) {
-            let gap = Math.random() < 0.35 ? 120 + Math.random() * 120 : 0;
+            let maxGapWidth = 180;
+            let gap = Math.random() < 0.35 ? 120 + Math.random() * maxGapWidth : 0;
             gap = Math.round(gap / 32) * 32; // Align to 32px
             
             if (maxPlatX === 0) gap = 0; // fallback if empty
@@ -34,6 +35,11 @@ function handleEntities() {
             
             let groundY = canvas.height - CONFIG.groundHeight;
             let newX = maxPlatX + gap;
+            
+            // If there's a gap, create a high path above it so one player can take the top route
+            if (gap > 0) {
+                platforms.push(new Platform(maxPlatX + 20, groundY - 140, gap - 40, 32, 'brick'));
+            }
             
             platforms.push(new Platform(newX, groundY, groundW, CONFIG.groundHeight + 200, 'ground'));
             
@@ -54,13 +60,17 @@ function handleEntities() {
                     if (Math.random() < 0.5) enemies.push(new Enemy(obX, groundY - 40, state.moonMode ? 'mine' : 'bug'));
                 } else {
                     // Floating ledge / Double jump requirement
-                    platforms.push(new Platform(obX, groundY - 160, 180, 32, 'brick'));
+                    platforms.push(new Platform(obX, groundY - 160, 240, 32, 'brick'));
                     if (Math.random() < 0.5) {
-                         platforms.push(new Platform(obX + 60, groundY - 280, 40, 40, 'mystery'));
+                         platforms.push(new Platform(obX + 100, groundY - 280, 40, 40, 'mystery'));
                     }
                     if (Math.random() < 0.6) {
                         let enemyY = state.moonMode ? groundY - 250 : groundY - 200;
                         enemies.push(new Enemy(obX + 40, enemyY, state.moonMode ? 'ufo' : 'fast'));
+                    }
+                    // Bottom threat
+                    if (Math.random() < 0.5) {
+                        enemies.push(new Enemy(obX + 80, groundY - 40, state.moonMode ? 'mine' : 'turtle'));
                     }
                 }
             } else if (maxPlatX > 0 && Math.random() < 0.3 && groundW > 250) {
@@ -170,21 +180,25 @@ function drawEnvironment(ctx, canvas) {
         projectiles.forEach(p => p.draw(ctx));
     }
 
-    // Optional player shadow
-    if(player && state.current === GAME_STATE.PLAYING && !player.dead) {
-        ctx.save();
-        let groundY = canvas.height - CONFIG.groundHeight;
-        let shadowY = groundY;
-        let heightAboveGround = groundY - (player.y + player.height);
-        let shadowAlpha = Math.max(0.05, 0.4 - (heightAboveGround * 0.003));
-        let shadowWidth = player.width * 0.8 + (player.isGrounded ? Math.sin(state.frames * 0.3) * 5 : 0);
-        
-        ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
-        ctx.beginPath();
-        ctx.ellipse(player.x + player.width/2, shadowY + 8, shadowWidth / 1.5, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
+    // Optional player shadows
+    [player1, player2].forEach((p, idx) => {
+        if(p && state.current === GAME_STATE.PLAYING && !p.dead) {
+            if (idx === 1 && !state.coopMode) return;
+            
+            ctx.save();
+            let groundY = canvas.height - CONFIG.groundHeight;
+            let shadowY = groundY;
+            let heightAboveGround = groundY - (p.y + p.height);
+            let shadowAlpha = Math.max(0.05, 0.4 - (heightAboveGround * 0.003));
+            let shadowWidth = p.width * 0.8 + (p.isGrounded ? Math.sin(state.frames * 0.3) * 5 : 0);
+            
+            ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
+            ctx.beginPath();
+            ctx.ellipse(p.x + p.width/2, shadowY + 8, shadowWidth / 1.5, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    });
 }
 
 function drawHUD(ctx, canvas) {
@@ -279,7 +293,8 @@ function drawMenu(ctx, canvas) {
 
 function drawGameOver(ctx, canvas) {
     drawEnvironment(ctx, canvas);
-    if (player) player.draw(ctx);
+    if (player1) player1.draw(ctx);
+    if (state.coopMode && player2) player2.draw(ctx);
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);

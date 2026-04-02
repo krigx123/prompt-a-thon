@@ -31,25 +31,33 @@ let state = {
     lastTimeMillis: 0,
     distance: 0,
     moonMode: false,
-    wasGPressed: false
+    wasGPressed: false,
+    coopMode: false,
+    wasCPressed: false
 };
 
 const keys = {
     Space: false,
     ArrowUp: false,
+    ArrowDown: false,
     ArrowLeft: false,
     ArrowRight: false,
     Enter: false,
+    KeyI: false,
     KeyW: false,
     KeyA: false,
     KeyS: false,
     KeyD: false,
     KeyF: false,
-    KeyG: false
+    KeyG: false,
+    KeyC: false,
+    ShiftLeft: false,
+    ShiftRight: false
 };
 
 // Global arrays
-let player;
+let player1;
+let player2;
 let clouds = [];
 let particles = [];
 let platforms = [];
@@ -63,8 +71,11 @@ function resizeCanvas() {
     CONFIG.groundHeight = canvas.height * 0.22;
     CONFIG.playerLimitX = canvas.width / 2;
     
-    if (typeof player !== 'undefined' && player && player.isGrounded) {
-        player.y = canvas.height - CONFIG.groundHeight - player.height;
+    if (typeof player1 !== 'undefined' && player1 && player1.isGrounded) {
+        player1.y = canvas.height - CONFIG.groundHeight - player1.height;
+    }
+    if (typeof player2 !== 'undefined' && player2 && player2.isGrounded) {
+        player2.y = canvas.height - CONFIG.groundHeight - player2.height;
     }
 }
 
