@@ -17,11 +17,13 @@ A retro-style HTML5 side-scrolling platformer crafted with a subtle nod to the I
 
 ## 🕹️ Controls
 
-- **Movement:** `Arrow Keys` or `W`, `A`, `S`, `D`
-- **Jump / Jetpack Thrust Up:** `Spacebar`, `Up Arrow`, `W`
-- **Jetpack Thrust Down (Moon Mode):** `Down Arrow`, `S`
-- **Shoot Fireball:** `F` (Requires Malware Purger)
-- **Toggle Moon Mode:** `G`
+- **Red Player (Main):** Move with `W`, `A`, `S`, `D`; Jump with `Spacebar`.
+- **Cyan Player (Co‑op):** Move with `Arrow Keys`; Jump with `Up Arrow`.
+- **Moon Mode Thrust Down:** `Down Arrow` (Cyan) or `S` (Red).
+- **Shoot Fireball:** `F` (Red) or `Shift` (Cyan).
+- **Toggle Moon Mode:** `G`.
+- **Toggle Co‑op Mode:** `C`.
+- **Start / Restart Game:** `Enter`.
 - **Start / Restart Game:** `Enter`
 
 *Note for Mobile: Use the on-screen semi-transparent touch controls to move and jump!*
